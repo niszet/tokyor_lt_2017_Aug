@@ -1,0 +1,160 @@
+---
+title: "TokyoR 64 LT<BR>Rからmidiファイルを読んで<br>plotしてみたお話"
+author: "niszet"
+date: "`r format(Sys.time(),'%Y/%m/%d')`"
+output:
+  revealjs::revealjs_presentation:
+    reveal_option:
+      slideNumber: true
+      center: true
+    theme: blood
+    css: "for-revealjs.css"
+pandoc_args: [
+  '--from', 'markdown+autolink_bare_uris+tex_math_single_backslash-implicit_figures'
+]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width="50%")
+library(revealjs)
+library(ggplot2)
+library(dplyr)
+library(rmusicwork)
+library(magrittr)
+```
+
+# 自己紹介
+
+## こんな人です
+名前：niszet  
+R歴：約１年  
+趣味：R、楽器(お休み中)、ラズパイ  
+![self](Figs/self.jpg)
+  
+普段は回路設計などをして生きてます
+
+
+# raw型とは…
+
+
+## Rのデータ型(mode)いろいろ
+* `integer`
+* `numeric`
+* `logical`
+* `factor`
+* `character`
+* `raw`      (今回紹介)
+* `complex`  (機会があれば)
+
+
+## raw型=バイト型{#rawisbyte}
+* 1つの要素で `1byte = 8bit = 2**8 = 0-255` までを表すことが出来る
+* バイナリファイル（データ）を扱う場合に使用する
+
+* `complex`と共に大体のRの書籍では紹介されない影の存在
+
+
+## `raw`はRの`mode`の中でも最弱...{#saijaku}
+
+```{r}
+c("a", as.raw(1)); c(1.0, as.raw(1)); 
+c(1L, as.raw(1)); c(TRUE, as.raw(1))
+```
+
+* 常に型を変換されてしまう側の存在
+
+## `operator`はほとんど使えない
+* 加減乗除は使用できない
+
+```{r}
+# as.raw(1)+as.raw(1)
+## Error in as.raw(1) + as.raw(1) : 
+##    non-numeric argument to binary operator
+```
+
+* 比較はできる
+```{r}
+as.raw(1)<as.raw(2)
+```
+
+## bit単位のand, or演算が出来る
+raw型に対しては`&` や`|`はbit単位でのAnd/Orをとる演算子となる。
+
+```{r}
+# 0011_1100(0x3c) & 0110_0110(0x66) = 0010_0100(0x24)
+as.raw(60) & as.raw(102)
+
+# 0011_1100(0x3c) & 0110_0110(0x66) = 0111_1110(0x7e)
+as.raw(60) | as.raw(102)
+```
+
+ベクトル化も可能
+```{r}
+c(as.raw(12),as.raw(255)) & c(as.raw(255),as.raw(1))
+```
+
+
+## 関連する関数
+* ファイルから(正確には`connection`から)値を読む
+    * `readBin`
+        * `readChar`(`ascii`の場合)
+    * `scan`
+* ファイルに値を書く
+    * `writeBin`
+        * `writeChar`(`ascii`の場合)
+
+
+大体の場合は`as.raw()`と`as.integer()`で相互に型を変換して使うことになるかと思います
+使い方はヘルプを参照ください(一番詳しい資料はヘルプ)
+
+
+# midiファイルを読んでみる
+
+## ライブラリを自作してみる
+
+* `tuneR`パッケージにも`tuneR::readMidi`がありますが、欲しいものとちょっと違う…
+    - waveファイルの読み込みなら`tuneR::readWave`でOK
+  
+* スタンダードMIDIファイルの仕様から頑張って実装…  
+["Standard MIDI Files ("SMF") - The MIDI Association"]("https://www.midi.org/specifications/category/smf-specifications" "")
+
+
+## 読んでみる
+
+```{r}
+# rsmf型として一旦ファイルを読む
+smf <- read_smf("midi/AveMaria.mid")
+# rsmf型をdata.frameに変換。音の高さやなる時間などを抜き出す
+nf <- make_note_frame(smf)
+# データの中身
+head(nf, n=4)
+```
+
+
+## plotしてみる
+```{r, warning=FALSE}
+# geom_segment で始点と終点になる列を指定。はじめの1/3だけplot
+ggplot(nf)+geom_segment(aes(x=start_time,y=height,
+                            xend=end_time,yend=height))+
+  xlab("time")+ylab("height")+xlim(c(0,10000))
+```
+
+# まとめ{#matome_top}
+
+## まとめ{#matome_sub}
+* やったこと
+    * Rの関数だけでバイナリファイルを扱えることを確認した。
+    * midiファイルを読むためのパッケージを作成しplot出来るようにした。
+* 課題  
+    - ファイルの読み込みが遅い(可変長データのため。RCpp化する？)
+    - data.frameからmidiファイルへ出力したい(SMFの理解が足りない)
+        * 色々なデータセットから音を出せるようにしたい
+
+
+## ありがとうぞうさん
+* このスライドはKazutan.Rの各種資料とcssファイルを参考にさせていただました。ありがとうございました。
+
+
+## Enjoy!!
+![self](Figs/self.jpg)
+
