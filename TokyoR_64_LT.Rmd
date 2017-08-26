@@ -8,7 +8,7 @@ output:
       slideNumber: true
       center: true
     theme: blood
-    css: "for-revealjs.css"
+    css: "for-revealjs_blood.css"
 pandoc_args: [
   '--from', 'markdown+autolink_bare_uris+tex_math_single_backslash-implicit_figures'
 ]
@@ -19,8 +19,11 @@ knitr::opts_chunk$set(echo = TRUE, out.width="50%")
 library(revealjs)
 library(ggplot2)
 library(dplyr)
+# library(tidyverse)
 library(rmusicwork)
 library(magrittr)
+library(RColorBrewer)
+
 ```
 
 # 自己紹介
@@ -52,16 +55,16 @@ R歴：約１年
 * バイナリファイル（データ）を扱う場合に使用する
 
 * `complex`と共に大体のRの書籍では紹介されない影の存在
-
+* `as.raw()` で0-255の整数を与えると作れる
 
 ## `raw`はRの`mode`の中でも最弱...{#saijaku}
 
 ```{r}
-c("a", as.raw(1)); c(1.0, as.raw(1)); 
-c(1L, as.raw(1)); c(TRUE, as.raw(1))
+c("a", as.raw(1)); c(1.0+1.0i, as.raw(1)); 
+c(1.0, as.raw(1)); c(TRUE, as.raw(1));
 ```
 
-* 常に型を変換されてしまう側の存在
+* NULLなら勝てそう(NAはlogicalなので負ける)
 
 ## `operator`はほとんど使えない
 * 加減乗除は使用できない
@@ -121,22 +124,34 @@ c(as.raw(12),as.raw(255)) & c(as.raw(255),as.raw(1))
 
 ## 読んでみる
 
-```{r}
+```{r, warning=FALSE}
 # rsmf型として一旦ファイルを読む
 smf <- read_smf("midi/AveMaria.mid")
-# rsmf型をdata.frameに変換。音の高さやなる時間などを抜き出す
+# rsmf型から音の高さやなる時間などを抜き出してdata.frameに変換。
 nf <- make_note_frame(smf)
 # データの中身
 head(nf, n=4)
+
 ```
 
+## read_smfの中身 {#read_smf_inside}
+```{r, warning=FALSE}
+# read_smfの中身
+head(read_smf)
+
+# その中でreadBinを使用しています
+head(rmusicwork:::read_track_data_size)
+
+```
 
 ## plotしてみる
 ```{r, warning=FALSE}
 # geom_segment で始点と終点になる列を指定。はじめの1/3だけplot
-ggplot(nf)+geom_segment(aes(x=start_time,y=height,
-                            xend=end_time,yend=height))+
-  xlab("time")+ylab("height")+xlim(c(0,10000))
+nf %>% ggplot()+geom_segment(aes(
+  x=start_time, y=height, xend=end_time,yend=height,
+  color=as.factor(nn), size=1)) + xlim(c(0,10000))+
+  xlab("time") + ylab("height") + theme(legend.position="none")+
+  scale_colour_brewer(palette = "Paired")
 ```
 
 # まとめ{#matome_top}
@@ -152,7 +167,7 @@ ggplot(nf)+geom_segment(aes(x=start_time,y=height,
 
 
 ## ありがとうぞうさん
-* このスライドはKazutan.Rの各種資料とcssファイルを参考にさせていただました。ありがとうございました。
+![zousan](Figs/zousan.jpg)
 
 
 ## Enjoy!!
